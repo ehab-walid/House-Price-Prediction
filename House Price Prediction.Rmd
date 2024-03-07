@@ -1,0 +1,559 @@
+---
+title: "CS5801 Coursework Template Proforma"
+author: '2257956'
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document: default
+  html_notebook: default
+version: 1
+---
+
+# 0. Instructions 
+
+
+```{r}
+# Add code here to load any required libraries with `library()`.  
+# We suggest you use `install.package()` for any required packages externally to this document 
+# since installation only need be done once.
+# import ggplot2 for graphing 
+library(ggplot2)
+```
+
+
+# 1. Organise and clean the data
+
+## 1.1 Subset the data into the specific dataset allocated
+ 
+
+
+```{r}
+# Assign your student id into the variable SID, for example:
+SID <- 2257956                  # This is an example, replace 2101234 with your actual ID
+SIDoffset <- (SID %% 100) + 1    # Your SID mod 100 + 1
+
+load("house-analysis.RDa")
+# Now subset the housing data set
+# Pick every 100th observation starting from your offset
+# Put into your data frame named mydf (you can rename it)
+mydf <- house.analysis[seq(from=SIDoffset,to=nrow(house.analysis),by=100),]
+```
+
+
+## 1.2 Data quality analysis
+
+The first part to any adequate data analysis needs to be checking the quality of data being analysed. A well checked dataset provides accurate interpretation and understanding of the data, and prevents any misleading implementation and eventually conclusions. Below are outlined the standard series of steps which will be involved in the checking of data quality for the housing price dataset.
+
+* Get an initial look at the dataset. 
+* Check that the data columns are of correct datatype.
+* Check that column names are suitable and not too lengthy.
+* Check for missing data.
+* Check for outliers.
+* Check for lengthy or duplicate factor levels due to mistyping or spelling errors.
+
+### Getting an initial look at the dataset and its structure
+
+This gives an overall outlook of the dataset and makes us familiar with the nature of the variables and what to expect. The summary function can provide a summary statistic of the whole dataset, while the str function gives us the dimension and the datatype for each of the variables.
+
+```{r}
+# summarised description of the dataset
+summary(mydf)
+```
+
+The summary function revealed a number of observations.
+* most of the variables are being considered as numeric except heating, as the summary function lists measures of location for most of these variables. 
+* No initial occurences of missing data. Summary function usually lists any missing values for each variable. We can have a closer look at this in later checks.
+
+Let us look at the overall structure of the dataset
+
+```{r}
+str(mydf)
+```
+
+Here, we can see that the dataset has 904 objects, with 12 variables; hence a dimension of 904 * 12. Except heating variable, most of the variables have a numeric or integer datatype. *has_terrace*, *has_alarm*, *heating*, *has_air_conditioning*, *has_parking* and *is_furnished* are supposed to categorical variables, given the columns are either binary or have limited and repeated values.
+
+Let us have a look at each of the variables. This can help us have a clear look at each variable and determine its required datatype, spot missing values or invalid data.
+
+### id
+
+This variable represents the property id of the properties. This variable needs to have unique and no missing values. 
+```{r}
+sum(is.na(mydf$id))
+```
+The is.na() function reveals that there are no missing values in the id column. This along with the integer datatype confirms that this variable has no insightful issues.
+
+### price
+
+The price variable needs to be numeric, and preferably have no missing values. 
+```{r}
+class(mydf$price)
+summary(mydf$price)
+sum(is.na(mydf$price))
+```
+The price is a numeric variable and has no unexpected or missing value.
+
+### mq - Total square meters of the property
+
+The mq variable needs to be numeric as it describes the measure of area. We will check for missing or unexpected data.
+```{r}
+class(mydf$mq)
+summary(mydf$mq)
+sum(is.na(mydf$mq))
+```
+
+The variable is of the correct datatype, and has no missing values. The summary function reveals a minimum value of 0, which seems unlikely as a house with 0 sq meters of space means there is no space to sell. We can look at the rows with mq values of 0 to gain more information.
+
+```{r}
+mydf[mydf$mq == 0, ]
+```
+The data row with 0 mq has ordinary values for price and other variables. We do not have more information about the nature of the house, and not much ground to remove the row. 
+
+### floor - Entrance floor of the property
+
+We are going to make sure this variable is numeric/integer and has no missing values or inordinary values.
+
+```{r}
+class(mydf$floor)
+summary(mydf$floor)
+sum(is.na(mydf$floor))
+```
+
+### n_rooms - number of rooms
+```{r}
+class(mydf$n_rooms)
+summary(mydf$n_rooms)
+sum(is.na(mydf$n_rooms))
+```
+The variable is of correct datatype and has no missing values. However, there are negative values for number of rooms which seems invalid. Let us look at the number of rows containing negative number of rooms.
+
+```{r}
+mydf[mydf$n_rooms < 0, ]
+```
+There is one row with negative n_rooms. This clearly is an invalid datarow. 
+
+### n_bathrooms - number of bathrooms
+
+```{r}
+class(mydf$n_bathrooms)
+summary(mydf$n_bathrooms)
+sum(is.na(mydf$n_bathrooms))
+```
+No missing or anomalies to report.
+
+### has_terrace - presence of terrace
+This variable can have values 1 or 0 - meaning yes or no, and is therefore binary. 
+```{r}
+class(mydf$has_terrace)
+table(mydf$has_terrace)
+sum(is.na(mydf$n_bathrooms))
+```
+The datatype for this variable is integer which needs to be categorical. There are no missing values.
+
+### has_alarm - presence of alarm
+This variable also needs to be categorical.
+```{r}
+class(mydf$has_alarm)
+table(mydf$has_alarm)
+sum(is.na(mydf$n_alarm))
+```
+Datatype is integer here. This needs to be categorical as well.
+
+### heating
+```{r}
+class(mydf$heating)
+table(mydf$heating)
+sum(is.na(mydf$heating))
+```
+This variable is of character datatype, but seems to have a category of heating, "autonamous", with a frequency value of 1. This category seems very similar to the category "autonomous" and is clearly a spelling error. 
+
+### has_air_conditioning
+```{r}
+class(mydf$has_air_conditioning)
+table(mydf$has_air_conditioning)
+sum(is.na(mydf$has_air_conditioning))
+```
+This column also has incorrect datatype. Also, the variable name seems too lengthy. We can change it to has_air_con for ease. 
+
+### has_parking
+```{r}
+class(mydf$has_parking)
+table(mydf$has_parking)
+sum(is.na(mydf$has_parking))
+```
+This column has incorrect datatype. No missing values to report
+
+### is_furnished
+```{r}
+class(mydf$is_furnished)
+table(mydf$is_furnished)
+sum(is.na(mydf$is_furnished))
+```
+This column also has incorrect datatype.
+
+
+## 1.3 Data cleaning  
+ 
+The data quality issues found in 1.2 are listed below:
+
+* Incorrect import of datatype for variables **has_terrace**, **has_alarm**, **heating**, **has_air_conditioning**, **has_parking** and **is_furnished**. These variables need to be categorical type due to their categorical nature. 
+* **has_air_conditioning** variable name is too lengthy. This can be changed to **has_air_con**. 
+* Presence of negative values for variable n_rooms. Number of rooms cannot be negative.
+* Misspelled category "autonamous" instead of "autonomous". Only one instance of "autonamous" suggests that this category is misspelled. 
+
+### change datatype of incorrectly imported datatypes. 
+Changing the datatype of these variables to categorical type ensures that we are able to model and explore the data more conveniently.
+```{r}
+# create copy df to store cleaned data
+cleaned.df <- mydf
+
+# change datatype to factor type
+cleaned.df$has_terrace <- as.factor(cleaned.df$has_terrace)
+cleaned.df$has_alarm <- as.factor(cleaned.df$has_alarm)
+cleaned.df$has_air_conditioning <- as.factor(cleaned.df$has_air_conditioning)
+cleaned.df$has_parking <- as.factor(cleaned.df$has_parking)
+cleaned.df$is_furnished <- as.factor(cleaned.df$is_furnished)
+
+# Function returning compact column classes
+col_classes <- function(df) {
+    t(as.data.frame(lapply(df, function(x) paste(class(x), collapse = ','))))
+}
+
+# Return housing data column classes
+col_classes(cleaned.df)
+
+```
+
+### Shorten lengthy variable name
+
+This is mainly done to ease readability. **has_air_conditioning** variable name can be changed to **has_air_con**
+
+```{r}
+# Change column name
+names(cleaned.df)[names(cleaned.df) == "has_air_conditioning"] <- "has_air_con"
+
+# list column names
+colnames(cleaned.df)
+```
+
+### Remove negative n_rooms rows
+
+Number of rooms should be positive. A negative value is clearly invalid and might produce unreliable and misleading results. Removing rows with negative values seems like the brest approach, as replacing with a positive value may change the distribution of the variable.
+
+```{r}
+# remove rows with negative n_rooms value
+cleaned.df <- subset(cleaned.df, n_rooms >= 0)
+
+# check for negative n_rooms value
+nrow(cleaned.df[cleaned.df$n_rooms<0, ])
+```
+
+### Change category "autonamous" to "autonomous" in heating variable. 
+
+Only one instance of "autonamous" suggests that this category is misspelled. The misspelled category is very similar to "autonomous" category.
+
+```{r}
+# Adjust the misspelled level for heating variable
+cleaned.df[cleaned.df == "autonamous"] <- "autonomous"
+table(cleaned.df$heating)
+```
+
+
+
+# 2. Exploratory Data Analysis (EDA)
+
+## 2.1 EDA plan
+
+This exploratory section includes looking at the variables of the dataset to gather understanding of distributions variations of the variables in the dataset. For this we will first look at each of the variables individually with the help of graphs. For the numeric continuous variables, a histogram will provide an extensive overview of the distribution of the variables, as it displays the frequencies of the range of values for the variable. For the categorical variables and discrete numerical variables, a bar chart would provide the count data for each of the different levels in the variable and therefor display its distribution. We will then look at how the variables covary in order to understand how variables behave with one another. In case of two numerical variables, a scatterplot displays how the two variables vary together and gives us an initial look at any underlying relationship or correlation between the two variables. We can confirm the the nature and significance of the relationship between the variables using a correlation test. For the relationship between categorical and continuous variables, a box plot would highlight how the median, IQR and the overall range of the continuous variables vary for each of the level in the categorical variable. Finally, any relationship between two categorical variables can be best plotted in a mosaic plot. It is wise to put focus on how the target variable of the research question, property price, varies with the independant variables, as this provides us an idea of which variables might have more impact in the variance of the dependant variable.
+
+## 2.2 EDA and summary of results  
+
+This section entails the exploratory data analysis of our data set. We started by looking at each variable individually, and found out that our dependant variable house price is not distributed normally which should not raise any issues for now. The categorical variables, has_alarm and has_parking, have very few datapoints for one of the levels. We then looked at how house prices differ with each of the variable in our data set, and found out that number of rooms, mq, number of bathrooms, presence of terrace, alarm and air conditioner affects the house price individually with varying significance. In case of the continuous variables, the relatively strongest correlation appears between house price and number of bathrooms, and the  
+
+### Looking at the each of the variables indivually
+
+```{r}
+ggplot(cleaned.df, aes(x=price)) + geom_histogram(binwidth = 50000) + ggtitle("Histogram of Price")+ theme_classic()
+ggplot(cleaned.df, aes(x=mq)) + geom_histogram(binwidth = 50) + ggtitle("Histogram of Square feet")+ theme_classic()
+ggplot(cleaned.df, aes(x=floor)) + geom_bar() + ggtitle("Bar chart of Entrance floor")+ scale_x_continuous(name="Entrance floor") + theme_classic()
+ggplot(cleaned.df, aes(x=n_rooms)) + geom_bar() + ggtitle("Bar chart of Number of rooms") + scale_x_continuous(name="Number of rooms") + theme_classic()
+ggplot(cleaned.df, aes(x=n_bathrooms)) + geom_bar() + ggtitle("Bar chart of Number of bathrooms") + scale_x_continuous(name="Number of bathrooms") + theme_classic()
+ggplot(cleaned.df, aes(x=has_terrace)) + geom_bar() + ggtitle("Barchart for Presence of Terrace")+ theme_classic()
+ggplot(cleaned.df, aes(x=has_alarm)) + geom_bar() + ggtitle("Barchart for Presence of Alarm")+ theme_classic()
+ggplot(cleaned.df, aes(x=has_air_con)) + geom_bar() + ggtitle("Barchart for Presence of Air conditioner")+ theme_classic()
+ggplot(cleaned.df, aes(x=has_parking)) + geom_bar() + ggtitle("Barchart for Presence of Parking")+ theme_classic()
+ggplot(cleaned.df, aes(x=heating)) + geom_bar() + ggtitle("Bar chart for presence of heating")+ theme_classic()
+ggplot(cleaned.df, aes(x=is_furnished)) + geom_bar() + ggtitle("Barchart for sold with furniture")+ theme_classic()
+
+
+```
+The above grapical representations show the distribution of data for each of the variables. Starting with the histogram for house prices, we find that the data is left skewed, as most of the data points lie within 50000 to 100000 given the range from 0 to 500000. This does not require any transformations as of yet. The data for the square space of the house is also left skewed, with most of the houses being between 50 and 100 mq. Most of the house listings in our dataset has an entrance floor 1 and the this decreases with the increase in entrance floors. Majority of the houses have 3 rooms and the least number of houses have 2 rooms. In case of number of bathrooms, we find most houses with 1 bathroom and the least houses with 3 bathrooms. Only a relatively few houses have a terrace with majority having no terrace at all. Most of the houses have no air conditioners, no parking and is not furnished. Also, most of the houses in our dataset have autonomous heating. However, there seem to be very few houses with parking in our dataset. This variable could have inadequate evidence to show the significance in difference in mean prices for each of its levels.
+
+
+We can now look at the individual effects of each variable on the response variable, the house prices. This can give us an initial look at the effect of the sole variables on the house prices.
+
+
+
+
+### Numeric continuous and discrete variables
+
+**price vs mq**
+
+```{r}
+ggplot(data=cleaned.df)+geom_point(aes(x=mq,y=price))
+```
+
+
+We cannot interpret definitely in case of price v mq. Most of the datapoints are focused on low mq values and very few for high mq values. However, we can see that as mq increases, the minimum price increases too. This could hint to a correlation between price and mq. We can check for correlation using the cor.test.
+
+```{r}
+cor.test(cleaned.df$price, cleaned.df$mq)
+```
+The p-value suggests that there is a significant correlation between price and mq and this cannot be neglected. The correlation between the two variables is 0.3, which is positive but not too strong.
+
+Despite the correlation, we can still see a lot of datapoints with high price values at low mq. This could be the effect of other variables. We will explore this shortly.
+
+**price vs entrance floor**
+
+```{r}
+#boxplot
+ggplot(cleaned.df, aes(factor(floor), price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by Entrance floor")
+```
+
+
+The median price does not change noticeable with the increase in entrance floor 1-4. The price is higher when the entrance floor is more than 4, but this could be insignificant as we do not have many datapoints for entrance floors above 4. A correlation test could give us more information.
+
+```{r}
+cor.test(cleaned.df$price, cleaned.df$floor)
+```
+The p-value is very insignificant, and the correlation coefficient is too small to hint at any noticeable correlation. 
+The higher price value at floors 5 and up could be because of other explanatory variables.
+
+**price vs number of rooms**
+
+```{r}
+ggplot(cleaned.df, aes(factor(n_rooms), price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by Number of rooms")
+```
+The house prices seem to increase with the number of rooms, as evident from the increasing median value. As the number of rooms increases, the variance also increases, suggesting there could be other variables contributing to the variation in prices. We can confirm correlation using the cor.test
+
+```{r}
+cor.test(cleaned.df$price, cleaned.df$n_rooms)
+```
+The p-value is very significant, and along with the coefficient suggest that there is a weak positive correlation between price and number of rooms. 
+
+**price vs number of bathrooms**
+
+```{r}
+ggplot(cleaned.df, aes(factor(n_bathrooms), price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by Number of bathrooms")
+```
+The plot shows an increase in median and variance of price with increase in number of bathrooms. 
+
+```{r}
+cor.test(cleaned.df$price, cleaned.df$n_bathrooms)
+```
+The p-value is significant and suggests a moderate positive correlation between price and number of bathrooms.
+
+
+### Categorical variables
+
+**price vs presence of parking**
+
+```{r}
+ggplot(cleaned.df, aes(has_parking, price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by presence of parking")
+```
+
+At face value, the plot suggests that house prices are usually lower for houses that have parking. We can perform a t-test to check if the difference in the mean price for different parking status is significant.
+```{r}
+t.test(cleaned.df$price ~ cleaned.df$has_parking)
+```
+The p-value is very insignificant, indicating that the mean price difference between the two levels is not significant. This seems expected, as house prices are usually higher for houses with parking. Also, if we recall, we did not have enough datapoints for houses with parking to conclude its effects.
+
+**price vs presence of alarm**
+
+```{r}
+ggplot(cleaned.df, aes(has_alarm, price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by presence of alarm")
+```
+The plot suggests that houses with alarms are generally more expensive. 
+
+```{r}
+t.test(cleaned.df$price ~ cleaned.df$has_alarm)
+```
+The p-value is somewhat significant, suggesting that the mean difference in house prices is significant.
+
+**price vs presence of terrace**
+```{r}
+ggplot(cleaned.df, aes(has_terrace, price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by presence of terrace")
+```
+The plot shows that price of houses with terrace is higher.
+```{r}
+t.test((cleaned.df$price ~ cleaned.df$has_terrace))
+```
+The p-value is very significant, and shows that presence of terrace does effect the price of a house.
+
+**price vs presence of air conditioner**
+```{r}
+ggplot(cleaned.df, aes(has_air_con, price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by presence of air conditioner")
+```
+
+The median prices seem slightly higher for houses with air conditioners. Let us check its significance.
+
+```{r}
+t.test(cleaned.df$price ~ cleaned.df$has_air_con)
+```
+P-value is significant, showing the difference is significant.
+
+**price vs heating type**
+```{r}
+ggplot(cleaned.df, aes(heating, price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by Heating type")
+```
+The median house prices for different type of heating seem similar. Let us check for the significance of difference if any.
+```{r}
+t.test(cleaned.df$price~ cleaned.df$heating)
+```
+
+The p-value is very insignificant, suggesting the mean difference is neglegible.
+
+**price vs presence of furniture**
+
+```{r}
+ggplot(cleaned.df, aes(is_furnished, price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by presence of furniture")
+```
+
+The box plot suggests slightly increased price for houses with furniture.
+
+```{r}
+t.test(cleaned.df$price ~ cleaned.df$is_furnished)
+```
+P-value is insignificant. The mean difference in price is neglegible.
+
+
+## 2.3 Additional insights and issues
+
+Even though we have found significant correlation or difference in mean between the house prices and some of the explanatory variables, the maximum correlation is lower than 0.5.  The correlation coefficient for the continuous variables is not impressively towards an extreme, and suggests that there could be presence of interactions. In case of price vs mq, we found datapoints for high prices even when mq was small. 
+
+We can plot different price vs mq plots with each plot containing the effect of one of the other explanatory variables. The variables which exhibit insignificant effects on house price are not included.
+
+```{r}
+ggplot(data=cleaned.df)+geom_point(aes(x=mq,y=price, color=n_rooms))
+ggplot(data=cleaned.df)+geom_point(aes(x=mq,y=price, color=n_bathrooms))
+ggplot(data=cleaned.df)+geom_point(aes(x=mq,y=price, color=has_terrace))
+ggplot(data=cleaned.df)+geom_point(aes(x=mq,y=price, color=has_alarm))
+ggplot(data=cleaned.df)+geom_point(aes(x=mq,y=price, color=has_air_con))
+ggplot(data=cleaned.df)+geom_point(aes(x=mq,y=price, color=heating))
+
+```
+From the plots, only the number of rooms seem to be the explanation for high prices in low mq houses. Most of the low mq houses which are relatively expensive have high number of rooms.
+
+
+# 3. Modelling
+
+## 3.1 Explain your analysis plan
+
+Our cleaned data set contains a continuous dependant variable, property price, and a mixture of numerical and categorical explanatory variables. Our EDA analysis showed **mq, n_rooms, n_bathrooms, has_terrace, has_alarm** and **has_air_con** have significant effects on the property price. An ANCOVA model would be suitable to model the relationship between the dependant and independant variables as it is the ideal choice when the dependant is a continuous variable and the indepndant is a mixture of continuous and categorical variables. We can create a model which includes all the explanatory variables from our cleaned dataset. This will be our maximal model. We can then minimise the model using the step function. We can check the fit of the model using the r squared and the AIC value for the model. Diagnostic plots for the model can help us check if there are any unexplained non linear patterns in the residuals or if the residuals are normally distributed. 
+
+## 3.2 Build a model for property price
+```{r}
+#model.all.lm <- lm(cleaned.df$price ~ cleaned.df$mq + cleaned.df$floor + cleaned.df$n_rooms + cleaned.df$n_bathrooms + cleaned.df$has_terrace + cleaned.df$has_alarm + cleaned.df$has_air_con +cleaned.df$has_parking + cleaned.df$heating + cleaned.df$is_furnished) 
+
+#model.all.lm <- lm(cleaned.df$price ~ cleaned.df$mq + cleaned.df$floor + cleaned.df$n_rooms + cleaned.df$n_bathrooms + cleaned.df$has_terrace + cleaned.df$has_alarm + cleaned.df$has_air_con +cleaned.df$has_parking + cleaned.df$heating + cleaned.df$is_furnished + I(mq ^ 2) + I(floor ^ 2) + I(n_rooms ^ 2) + I(n_bathrooms ^ 2), data=cleaned.df) 
+
+#model.all.lm <- lm(cleaned.df$price ~ cleaned.df$mq + as.factor(cleaned.df$floor) + as.factor(cleaned.df$n_rooms) + as.factor(cleaned.df$n_bathrooms) + cleaned.df$has_terrace + cleaned.df$has_alarm + cleaned.df$has_air_con +cleaned.df$has_parking + cleaned.df$heating + cleaned.df$is_furnished)
+```
+
+
+```{r}
+# build ANCOVA model including narrowed explanatory variables from EDA
+#model.eda.lm <- lm(price ~ mq + n_rooms + n_bathrooms + has_terrace + has_alarm + has_air_con, data = cleaned.df)
+#summary(model.eda.lm)
+
+# build ANCOVA model including all explanatory variables
+model.all.lm <- lm(price ~ mq + floor + n_rooms + n_bathrooms + has_terrace + has_alarm + has_air_con + has_parking + heating + is_furnished, data = cleaned.df)
+
+summary(model.all.lm)
+
+```
+
+```{r}
+model.min.lm <- step(model.all.lm)
+summary(model.min.lm)
+```
+```{r}
+plot(model.min.lm)
+```
+
+## 3.3 Critique model using relevant diagnostics
+
+The model achieved in section 3.2 is a very poor model to explain variances in house price. The model has a very low $r^2$ value; it can only explain 24% of the variance in house prices. The high F-statistic value does not contribute much given the low $r^2$. The residual vs fitted plot show higher scatter when fitten values increase, which could point to an unexplained non-linear relationship. The QQ-plot of the residuals does not raise any alarms except the presence of a few outliers. 
+
+Keeping all the criticism aside, the model recognises mq, n_rooms, n_bathrooms, has_terrace and heating as the significant factors in affecting house prices. Increase in **mq, n_rooms and n_bathrooms** have a positive effect on the house prices while presence of terrace, alarm and other heating types cause relatively higher property prices.
+
+## 3.4 Suggest improvements to your model
+
+We could introduce interactions between the explanatory variables in our model. This would create a more complicated model but this should not matter if the model is able to provide a significanly higher $r^2$ value. Transformations on the variables could also explain the variances more. A logarithmic transformation on the property price could remove any trend from the first diagnostic plot of the model. Finally, a larger data set could create a more accurate model, there would be more information to feed the model.
+
+# 4. Extension work
+
+## 4.1 Model the likelihood of a property being furnished (using the is_furnished variable provided).
+
+Given the target attribute is a binary variable, Logistic regression could come in handy in explaining the different outcomes in the dependant. We can first check how the dependant variable behaves with each explanatory variables. This could give us an idea on how each explanatory variables affect the chance of a property being furnished. We can then remove any explanatory variable that needs removing before using a Logistic regression model to model the relationship. The summary statistics and the diagnostic plots will give help us interpret the model.
+
+### EDA
+
+```{r}
+# boxplots for is_furnished vs numerical explanatory variables
+
+ggplot(cleaned.df, aes(is_furnished, price)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of House price by presence of furniture")
+
+ggplot(cleaned.df, aes(is_furnished, mq)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of mq by presence of furniture")
+
+ggplot(cleaned.df, aes(is_furnished, n_rooms)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of number of rooms by presence of furniture")
+
+ggplot(cleaned.df, aes(is_furnished, n_bathrooms)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of number of bathrooms by presence of furniture")
+
+ggplot(cleaned.df, aes(is_furnished, floor)) + geom_boxplot(fill="steelblue2") + theme_classic() + labs(title="Box Plot of Entrance floor by presence of furniture")
+
+
+```
+Properties with slightly higher prices tend to be furnished. There seem to be no effect of size of space, number of rooms or entrance floor on the chance of a house being furnished. Houses tend to be furnished if number of bathrooms is more than 1, but this varies as there are overlappping variances in the box plot.
+
+```{r}
+attach(cleaned.df)
+```
+
+
+```{r}
+mosaicplot(is_furnished~has_alarm, main = "Mosaic Plot of Presence of furniture by Presence of Alarm")
+mosaicplot(is_furnished~has_parking, main = "Mosaic Plot of Presence of furniture by Presence of Parking")
+mosaicplot(is_furnished~has_terrace, main = "Mosaic Plot of Presence of furniture by Presence of Terrace")
+mosaicplot(is_furnished~heating, main = "Mosaic Plot of Presence of furniture by Presence of Heating")
+mosaicplot(is_furnished~has_air_con, main = "Mosaic Plot of Presence of furniture by Presence of Air Conditioner")
+```
+The mosaic plots for the effect of categorical variables on the furnished status is uninterpretable. Only that of the effect of air con presence is somewhat interpretable as we can see an unfurnished house usually has no air conditioners.
+
+### Building the Logistic model
+
+We will start off by building a model which has all the explanatory variables, as our EDA did not point to any reason for eliminating any variable.
+
+```{r}
+furniture.lm<-glm(is_furnished ~ price + mq + n_rooms + n_bathrooms + floor + has_air_con + has_alarm + has_parking + has_terrace + heating, family = "binomial")
+summary(furniture.lm)
+```
+Let us minimise the model using the step function
+
+```{r}
+furniture.min.lm <- step(furniture.lm)
+```
+
+```{r}
+summary(furniture.min.lm)
+exp(coef(furniture.min.lm))
+```
+### Model outcome and critique
+The step function narrowed the explanatory variables to just presence of air conditioner. Presence of air conditioner increases the chance of a property being furnished. This makes sense, as a house which has an air conditioner also corresponds to the house being furnished in most cases.
+
+We can build a model which better explains how presence of furniture is affected using a larger dataset. The dataset we have a few datapoints with furnished houses.
+```{r}
+table(is_furnished)
+```
+
+If we have a larger dataset, maybe we can find the effect that other variables might have on the odds of a property being furnished.
+
+# References  
